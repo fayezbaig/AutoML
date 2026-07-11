@@ -1,0 +1,43 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+automl-tabular-env
+
+# Parquet and data files
+# allow predictions.npy to be uploaded and allow eval results to be saved here
+*.parquet
+data/**
+*.npy
+
+!data/exam_dataset/
+!data/exam_dataset/test_out/
+!data/exam_dataset/test_out/*.json
+!data/exam_dataset/*.npy
+
+# Logs and test artifacts
+*.log
+.coverage
+.cache
+.pytest_cache/
+.hypothesis/
+coverage.xml
+
+# Notebooks
+.ipynb_checkpoints
+
+# IDE/config
+.idea/
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+MANIFEST
