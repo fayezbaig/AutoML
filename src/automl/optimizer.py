@@ -1,109 +1,76 @@
-import numpy as np
+# optimizer.py
+from __future__ import annotations
 
-from .surrogate import RandomForestSurrogate
-from .acquisition import ExpectedImprovement
-from .search_space import SearchSpace
+from smac import HyperparameterOptimizationFacade, Scenario
+from smac.acquisition.function import EI
+
+from .search_space import get_configspace
 
 
 class BayesianOptimizer:
+    """
+    SMAC3-backed replacement for the manual (surrogate.py + acquisition.py
+    + hand-rolled loop) optimizer. Keeps the EXACT SAME external interface
+    as before, so automl.py needs no changes:
 
-    def __init__(
-        self,
-        seed,
-        n_init=10,
-        n_iter=30
-    ):
+        optimizer = BayesianOptimizer(seed, n_init, n_iter)
+        best_params, best_score = optimizer.optimize(objective_fn)
 
+    where objective_fn: callable(params: dict) -> float (higher is better).
+
+    Internals:
+        Surrogate model : Random Forest (HyperparameterOptimizationFacade's
+                           default -- not overridden, replaces surrogate.py)
+        Acquisition fn   : Expected Improvement, set explicitly (replaces
+                           acquisition.py); SMAC3 defaults the facade to
+                           LogEI otherwise.
+        Initial design   : n_init random configurations (replaces the
+                           manual random-search warmup loop)
+        BO iterations    : n_iter model-guided evaluations
+    """
+
+    def __init__(self, seed: int, n_init: int = 10, n_iter: int = 30):
         self.seed = seed
-
         self.n_init = n_init
         self.n_iter = n_iter
-
-        self.space = SearchSpace(seed)
-
-        self.surrogate = RandomForestSurrogate(seed)
-
-        self.acquisition = ExpectedImprovement()
+        self.n_trials = n_init + n_iter
 
     def optimize(self, objective_fn):
-        """
-        objective_fn: callable(params: dict) -> float (higher is better)
+        cs = get_configspace(seed=self.seed)
 
-        The optimizer itself is agnostic to WHAT the score means -- it's
-        the caller's job to hand in the right objective, e.g.
-        `partial(internal_cv_score, X_train, y_train, seed=seed)` for a
-        single dataset (Tier 1), or `partial(multi_fold_score, folds,
-        seed=seed)` for averaging over several outer folds (Tier 2).
-        This keeps the search algorithm identical in both cases.
-        """
-
-        X_history = []
-        y_history = []
-
-        best_score = -np.inf
-        best_params = None
-
-        # Initial random search
-
-        for _ in range(self.n_init):
-
-            params = self.space.sample()
-
+        def target_function(config, seed: int = 0) -> float:
+            params = dict(config)
             score = objective_fn(params)
+            return -score  # SMAC minimizes -> flip sign of the R^2-based score
 
-            X_history.append(
-                self.space.to_array(params)
-            )
+        scenario = Scenario(
+            cs,
+            n_trials=self.n_trials,
+            deterministic=True,
+            seed=self.seed,
+        )
 
-            y_history.append(score)
+        initial_design = HyperparameterOptimizationFacade.get_initial_design(
+            scenario, n_configs=self.n_init
+        )
 
-            if score > best_score:
+        acquisition_function = EI()
 
-                best_score = score
-                best_params = params
+        model = HyperparameterOptimizationFacade.get_model(scenario, n_trees=200)
 
-        # Bayesian optimization
+        smac = HyperparameterOptimizationFacade(
+            scenario,
+            target_function,
+            model=model,
+            initial_design=initial_design,
+            acquisition_function=acquisition_function,
+            overwrite=True,
+        )
 
-        for _ in range(self.n_iter):
+        incumbent = smac.optimize()
+        best_loss = smac.validate(incumbent)
 
-            self.surrogate.fit(
-                np.array(X_history),
-                np.array(y_history)
-            )
-
-            best_candidate = None
-            best_ei = -np.inf
-
-            for _ in range(100):
-
-                candidate = self.space.sample()
-
-                x = self.space.to_array(candidate)
-
-                mean, std = self.surrogate.predict(x)
-
-                ei = self.acquisition.compute(
-                    mean,
-                    std,
-                    best_score
-                )
-
-                if ei > best_ei:
-
-                    best_ei = ei
-                    best_candidate = candidate
-
-            score = objective_fn(best_candidate)
-
-            X_history.append(
-                self.space.to_array(best_candidate)
-            )
-
-            y_history.append(score)
-
-            if score > best_score:
-
-                best_score = score
-                best_params = best_candidate
+        best_params = dict(incumbent)
+        best_score = -best_loss
 
         return best_params, best_score

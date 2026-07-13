@@ -16,7 +16,6 @@ from automl.automl import AutoML
 import argparse
 
 
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,22 +32,19 @@ def main(
     datadir: Path,
 ):
     """
-    Single-fold path. This is the ONE that matches the exam dataset:
-    only ever one (X_train, y_train, X_test) is available, so HPO here
-    uses internal-CV (Tier 1, automl.fit) -- it never assumes outer
-    folds exist.
+    Single-fold path -- this is exactly what will run on the exam
+    dataset: one (X_train, y_train, X_test), one independent internal-CV
+    HPO search (SMAC BO with RF surrogate + EI acquisition), one final
+    model.
     """
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
-    logger.info("Fitting AutoML (Tier 1: internal-CV HPO)")
+    logger.info("Fitting AutoML (internal-CV HPO via SMAC)")
 
     automl = AutoML(seed=seed)
     automl.fit(dataset.X_train, dataset.y_train)
     test_preds: np.ndarray = automl.predict(dataset.X_test)
 
-    # Write the predictions of X_test to disk
-    # This will be used by github classrooms to get a performance
-    # on the test set.
     logger.info("Writing predictions to disk")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as f:
@@ -70,48 +66,31 @@ def evaluate_across_folds(
     output_path: Path,
 ):
     """
-    Multi-fold path. Only valid for the practice datasets (which give
-    you several outer folds). HPO here uses multi-fold-averaging
-    (Tier 2, automl.fit_multi_fold) to select hyperparameters that hold
-    up across different train/test splits, THEN evaluate_per_fold trains
-    one fresh model per fold with those hyperparameters and reports the
-    honest per-fold test R2 -- this is what validates your pipeline
-    DESIGN, it is not the path used for the exam dataset itself.
+    Multi-fold validation path -- only valid for practice datasets.
+
+    Runs the SAME per-fold-independent HPO procedure that will run on
+    the exam dataset, once per fold, with no sharing of hyperparameters
+    or data between folds. Reports the mean/std of the resulting honest
+    test R2 across folds, plus how much the independently-chosen
+    hyperparameters agree with each other.
     """
 
     folds = []
 
     for fold in range(1, n_folds + 1):
-
         logger.info(f"Loading fold {fold}")
-
-        dataset = Dataset.load(
-            datadir=datadir,
-            task=task,
-            fold=fold
-        )
-
+        dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
         folds.append(
-            (
-                dataset.X_train,
-                dataset.y_train,
-                dataset.X_test,
-                dataset.y_test
-            )
+            (dataset.X_train, dataset.y_train, dataset.X_test, dataset.y_test)
         )
 
-    logger.info("Running multi-fold-averaging HPO across all outer folds")
+    logger.info("Running per-fold-independent HPO across all outer folds")
 
-    automl = AutoML(seed=seed)
-    automl.fit_multi_fold(folds)
-
-    scores = automl.evaluate_per_fold(folds)
+    scores, params_list, models = AutoML.run_per_fold(folds, seed=seed)
 
     # Save the last fold's predictions as a sanity-check artifact
-    # (evaluate_per_fold already stores one model per fold in
-    # automl.models, in the same order as `folds`).
     if output_path is not None:
-        last_preds = automl.models[-1].predict(folds[-1][2])
+        last_preds = models[-1].predict(folds[-1][2])
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with output_path.open("wb") as f:
             np.save(f, last_preds)
@@ -121,7 +100,7 @@ def evaluate_across_folds(
         f"+/- {scores.std():.4f} over {n_folds} folds"
     )
 
-    return scores
+    return scores, params_list
 
 
 if __name__ == "__main__":
@@ -138,56 +117,29 @@ if __name__ == "__main__":
         "--output-path",
         type=Path,
         default=Path("data/bike_sharing_demand/1/predictions.npy"),
-        help=(
-            "The path to save the predictions to."
-            " By default this will just save to './predictions.npy'."
-        )
     )
     parser.add_argument(
         "--fold",
         type=int,
         default=1,
         help=(
-            "The fold to run on."
-            " You are free to also evaluate on other folds for your own analysis."
-            " For the exam dataset, there exists only a single fold, fold 1."
+            "The fold to run on. For the exam dataset, there exists only"
+            " a single fold, fold 1."
         ),
     )
-
     parser.add_argument(
         "--n-folds",
         type=int,
         default=None,
         help=(
-            "If set, runs evaluate_across_folds instead of main -- loops folds 1..n_folds"
-            " and reports mean/std R^2. Only valid for practice datasets"
+            "If set, runs evaluate_across_folds instead of main -- loops"
+            " folds 1..n_folds, each with its own independent HPO search,"
+            " and reports mean/std R^2. Only valid for practice datasets."
         ),
     )
-
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help=(
-            "Random seed for reproducibility if you are using and randomness,"
-            " i.e. torch, numpy, pandas, sklearn, etc."
-        )
-    )
-
-    parser.add_argument(
-        "--datadir",
-        type=Path,
-        default=DATADIR,
-        help=(
-            "The directory where the datasets are stored."
-            " You should be able to mostly leave this as the default."
-        )
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Whether to log only warnings and errors."
-    )
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--datadir", type=Path, default=DATADIR)
+    parser.add_argument("--quiet", action="store_true")
 
     args = parser.parse_args()
 
@@ -196,13 +148,9 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.WARNING)
 
-    logger.info(
-        f"Running task {args.task}"
-        f"\n{args}"
-    )
+    logger.info(f"Running task {args.task}\n{args}")
 
     if args.n_folds is not None:
-
         evaluate_across_folds(
             task=args.task,
             n_folds=args.n_folds,
