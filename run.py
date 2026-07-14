@@ -8,11 +8,36 @@ which we will grade using GitHub Classroom.
 """
 from __future__ import annotations
 
+# --- Make src/ importable -----------------------------------------------
+# run.py lives OUTSIDE src/, but `automl` lives at src/automl/ -- so
+# "import automl.*" won't resolve until src/ is on sys.path. This must
+# happen before ANY "from automl..." import, including the
+# determinism import directly below.
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+# -------------------------------------------------------------------------
+
+# --- Reproducibility: MUST run before numpy/pandas/smac/etc. are ------
+# --- imported anywhere, including transitively via `automl`. -----------
+# PYTHONHASHSEED can only be fixed by an env var present before the
+# interpreter starts; random.seed()/np.random.seed() (further below)
+# do NOT touch it. If it's not already pinned, re-exec this exact
+# script as a fresh subprocess with it set, then pin thread counts for
+# every BLAS/OpenMP-backed library before they get imported.
+# See automl/determinism.py for the full explanation.
+from automl.determinism import reexec_with_fixed_hash_seed, pin_thread_env
+
+reexec_with_fixed_hash_seed()
+pin_thread_env()
+# ------------------------------------------------------------------------
+
 from sklearn.metrics import r2_score
 import numpy as np
 from automl.data import Dataset
 from automl.automl import AutoML
+from automl.determinism import seed_everything
 import argparse
 
 
@@ -41,7 +66,17 @@ def main(
 
     logger.info("Fitting AutoML (internal-CV HPO via SMAC)")
 
-    automl = AutoML(seed=seed)
+    automl = AutoML(
+        seed=seed,
+        n_trials=8,        # was 200 -- how many configs SMAC evaluates
+        n_init=4,           # was 10 -- initial random design size
+        min_budget=20,       # was 50  -- cheapest n_estimators fidelity
+        max_budget=60,       # was 1000 -- most expensive n_estimators fidelity
+        # Isolates this run's SMAC output directory (smac3_output/<run_id>/<seed>)
+        # from every other task/fold/seed combination -- see optimizer.py.
+        run_id=f"{task}_fold{fold}_seed{seed}",
+    )
+
     automl.fit(dataset.X_train, dataset.y_train)
     test_preds: np.ndarray = automl.predict(dataset.X_test)
 
@@ -86,7 +121,16 @@ def evaluate_across_folds(
 
     logger.info("Running per-fold-independent HPO across all outer folds")
 
-    scores, params_list, models = AutoML.run_per_fold(folds, seed=seed)
+    scores, params_list, models = AutoML.run_per_fold(
+        folds,
+        seed=seed,
+        n_trials=8,
+        n_init=4,
+        min_budget=20,
+        max_budget=60,
+        n_splits=5,
+        run_id_prefix=f"{task}_seed{seed}",
+    )
 
     # Save the last fold's predictions as a sanity-check artifact
     if output_path is not None:
@@ -147,6 +191,14 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
+
+    # Global-RNG safety net for anything upstream (data loading, sklearn
+    # internals) that relies on unseeded global state rather than an
+    # explicit random_state. This is IN ADDITION TO -- not a replacement
+    # for -- the PYTHONHASHSEED pin and thread pinning done at the top of
+    # this file, which fix different (and otherwise invisible) sources of
+    # non-determinism. See automl/determinism.py.
+    seed_everything(args.seed)
 
     logger.info(f"Running task {args.task}\n{args}")
 

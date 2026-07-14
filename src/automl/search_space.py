@@ -6,15 +6,18 @@ from ConfigSpace import ConfigurationSpace, Float, Integer
 
 def get_configspace(seed: int = 42) -> ConfigurationSpace:
     """
-    Same bounds as the original manual SearchSpace.sample():
+    Same bounds as before:
         learning_rate     ~ Uniform(0.01, 0.20)
         num_leaves        ~ Randint(20, 100)
         max_depth         ~ Randint(3, 15)
         min_child_samples ~ Randint(10, 100)
 
-    SMAC/ConfigSpace samples from this directly -- no more manual
-    to_array()/from_array() bookkeeping needed, SMAC handles that
-    internally.
+    NOTE (BOHB): `n_estimators` is deliberately NOT in this ConfigSpace.
+    Under BOHB, the number of boosting rounds is the fidelity/budget
+    dimension controlled externally by SMAC's Hyperband intensifier
+    (see optimizer.py's min_budget/max_budget), not a hyperparameter
+    to be searched over. Every trial gets a `budget` value injected by
+    SMAC at eval time instead of sampling it here.
     """
     cs = ConfigurationSpace(seed=seed)
     cs.add(

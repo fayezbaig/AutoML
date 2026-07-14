@@ -65,6 +65,13 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
+    # Belt-and-suspenders: see run.py for why -- main determinism fix is
+    # the LightGBM flags in utils.py, this is a secondary safeguard.
+    import random
+    import numpy as np
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+
     main(
         task=args.task,
         n_folds=args.n_folds,

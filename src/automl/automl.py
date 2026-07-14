@@ -7,8 +7,8 @@ import logging
 import numpy as np
 from sklearn.metrics import r2_score
 
-from .optimizer import BayesianOptimizer
-from .utils import internal_cv_score, fit_lgbm_with_early_stopping
+from .optimizer import BOHBOptimizer
+from .utils import internal_cv_score_budgeted, fit_lgbm_with_early_stopping
 
 
 logger = logging.getLogger(__name__)
@@ -16,10 +16,30 @@ logger = logging.getLogger(__name__)
 
 class AutoML:
 
-    def __init__(self, seed: int, n_init: int = 10, n_iter: int = 30):
+    def __init__(
+        self,
+        seed: int,
+        min_budget: int = 50,
+        max_budget: int = 300,
+        n_trials: int = 60,
+        eta: int = 3,
+        n_init: int = 10,
+        walltime_limit: float | None = None,
+        run_id: str | None = None,
+    ):
         self.seed = seed
+        self.min_budget = min_budget
+        self.max_budget = max_budget
+        self.n_trials = n_trials
+        self.eta = eta
         self.n_init = n_init
-        self.n_iter = n_iter
+        self.walltime_limit = walltime_limit  # seconds; exam's 24h budget is 86400
+        # Identifies this run's SMAC output directory (see optimizer.py /
+        # determinism.py) so it never collides with another task/fold/seed's
+        # run. Reproducibility across process reruns also depends on
+        # PYTHONHASHSEED being pinned and n_workers=1 -- see
+        # automl/determinism.py, which run.py / evaluate_folds.py apply.
+        self.run_id = run_id
 
         self.best_params = None
         self.best_cv_score = None
@@ -28,31 +48,50 @@ class AutoML:
     # ------------------------------------------------------------------
     # Core HPO + fit for ONE dataset (one fold's worth of data). This is
     # the exact method that will run on the exam dataset -- internal
-    # K-fold CV on X_train picks the hyperparameters (now via SMAC BO
-    # with a Random Forest surrogate + EI acquisition), then a final
-    # model is refit on the full X_train.
+    # K-fold CV on X_train picks the hyperparameters via SMAC's BOHB
+    # (Random Forest surrogate + EI acquisition, Hyperband budget
+    # allocation over n_estimators), then a final model is refit on the
+    # full X_train using early stopping to fix the deployed round count.
     # ------------------------------------------------------------------
     def fit(self, X_train, y_train, n_splits: int = 5):
 
+        # objective(params, budget) -> avg CV R2 at that budget
         objective = partial(
-            internal_cv_score,
+            internal_cv_score_budgeted,
             X_train,
             y_train,
             seed=self.seed,
             n_splits=n_splits,
         )
 
-        optimizer = BayesianOptimizer(
-            seed=self.seed, n_init=self.n_init, n_iter=self.n_iter
+        logger.info(
+            f"CONFIG: trials={self.n_trials}, "
+            f"init={self.n_init}, "
+            f"min_budget={self.min_budget}, "
+            f"max_budget={self.max_budget}, "
+            f"cv={n_splits}"
+    )
+
+        optimizer = BOHBOptimizer(
+            seed=self.seed,
+            min_budget=self.min_budget,
+            max_budget=self.max_budget,
+            n_trials=self.n_trials,
+            eta=self.eta,
+            n_init=self.n_init,
+            walltime_limit=self.walltime_limit,
+            run_id=self.run_id,
         )
         best_params, best_score = optimizer.optimize(objective)
 
-        logger.info(f"Best internal-CV R2: {best_score:.4f}")
+        logger.info(f"Best internal-CV R2 (BOHB incumbent): {best_score:.4f}")
         logger.info(f"Best parameters: {best_params}")
 
         self.best_params = best_params
         self.best_cv_score = best_score
 
+        # Final deployed model: n_estimators is picked here via early
+        # stopping, independently of BOHB's fidelity budget above.
         self._final_model, n_rounds = fit_lgbm_with_early_stopping(
             X_train, y_train, self.best_params, self.seed
         )
@@ -84,7 +123,7 @@ class AutoML:
     # Automated per-fold-independent runner.
     #
     # For EACH fold, runs a completely fresh, independent fit() -- its
-    # own internal-CV HPO search, its own best_params, its own model --
+    # own internal-CV BOHB search, its own best_params, its own model --
     # exactly simulating "if this fold were the exam dataset." No fold's
     # search ever sees another fold's data, and no hyperparameters are
     # shared or averaged across folds during the search itself.
@@ -95,7 +134,18 @@ class AutoML:
     # agree with each other -- without ever mixing folds during training.
     # ------------------------------------------------------------------
     @staticmethod
-    def run_per_fold(folds, seed, n_init: int = 10, n_iter: int = 30, n_splits: int = 5):
+    def run_per_fold(
+        folds,
+        seed,
+        min_budget: int = 50,
+        max_budget: int = 300,
+        n_trials: int = 60,
+        eta: int = 3,
+        n_init: int = 10,
+        n_splits: int = 5,
+        walltime_limit: float | None = None,
+        run_id_prefix: str = "run",
+    ):
 
         scores = []
         params_list = []
@@ -103,9 +153,22 @@ class AutoML:
 
         for i, (X_train, y_train, X_test, y_test) in enumerate(folds):
 
-            logger.info(f"--- Fold {i+1}/{len(folds)}: independent HPO ---")
+            logger.info(f"--- Fold {i+1}/{len(folds)}: independent BOHB HPO ---")
 
-            automl = AutoML(seed=seed, n_init=n_init, n_iter=n_iter)
+            automl = AutoML(
+                seed=seed,
+                min_budget=min_budget,
+                max_budget=max_budget,
+                n_trials=n_trials,
+                eta=eta,
+                n_init=n_init,
+                walltime_limit=walltime_limit,
+                # Distinct per-fold run_id -- see optimizer.py. Without
+                # this, every fold reuses the same seed + identical
+                # scenario settings, so SMAC would hash all folds to the
+                # SAME smac3_output/<name>/<seed> directory.
+                run_id=f"{run_id_prefix}_fold{i+1}",
+            )
             automl.fit(X_train, y_train, n_splits=n_splits)
 
             preds = automl.predict(X_test)
@@ -119,7 +182,7 @@ class AutoML:
 
         scores = np.array(scores)
         logger.info(
-            f"Per-fold independent HPO -- mean R2={scores.mean():.4f} "
+            f"Per-fold independent BOHB HPO -- mean R2={scores.mean():.4f} "
             f"+/- {scores.std():.4f} over {len(folds)} folds"
         )
 
