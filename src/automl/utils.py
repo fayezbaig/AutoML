@@ -42,7 +42,7 @@ def _fit_and_score(X_tr, y_tr, X_val, y_val, params, seed,
         random_state=seed,
         n_estimators=max_estimators,
         verbosity=-1,
-        **LGBM_DETERMINISM_KWARGS,
+        #**LGBM_DETERMINISM_KWARGS,
         **params,
     )
 
@@ -101,7 +101,7 @@ def internal_cv_score_budgeted(
             random_state=seed,
             n_estimators=int(budget),
             verbosity=-1,
-            **LGBM_DETERMINISM_KWARGS,
+            #**LGBM_DETERMINISM_KWARGS,
             **params,
         )
         model.fit(X_tr, y_tr)
@@ -178,7 +178,7 @@ def fit_lgbm_with_early_stopping(
         random_state=seed,
         n_estimators=n_rounds,
         verbosity=-1,
-        **LGBM_DETERMINISM_KWARGS,
+        #**LGBM_DETERMINISM_KWARGS,
         **params,
     )
     final_model.fit(X_train, y_train)

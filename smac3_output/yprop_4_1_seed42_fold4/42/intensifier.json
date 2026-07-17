@@ -1,0 +1,133 @@
+{
+  "incumbent_ids": [
+    50
+  ],
+  "rejected_config_ids": [
+    4,
+    5,
+    1,
+    9,
+    10,
+    6,
+    14,
+    12,
+    15,
+    19,
+    20,
+    23,
+    24,
+    25,
+    26,
+    29,
+    18,
+    32,
+    34,
+    35,
+    37,
+    39,
+    40,
+    42,
+    44,
+    45,
+    46,
+    49,
+    30
+  ],
+  "incumbents_changed": 7,
+  "trajectory": [
+    {
+      "config_ids": [
+        1
+      ],
+      "costs": [
+        -0.03428494044899784
+      ],
+      "trial": 4,
+      "walltime": 4.128237009048462
+    },
+    {
+      "config_ids": [
+        6
+      ],
+      "costs": [
+        -0.0383562512700538
+      ],
+      "trial": 10,
+      "walltime": 17.8516104221344
+    },
+    {
+      "config_ids": [
+        12
+      ],
+      "costs": [
+        -0.05304607195781543
+      ],
+      "trial": 16,
+      "walltime": 46.96452593803406
+    },
+    {
+      "config_ids": [
+        15
+      ],
+      "costs": [
+        -0.06211291161478103
+      ],
+      "trial": 18,
+      "walltime": 52.01633405685425
+    },
+    {
+      "config_ids": [
+        18
+      ],
+      "costs": [
+        -0.0676666458033853
+      ],
+      "trial": 22,
+      "walltime": 57.64216113090515
+    },
+    {
+      "config_ids": [
+        30
+      ],
+      "costs": [
+        -0.06771628178644962
+      ],
+      "trial": 36,
+      "walltime": 118.26106381416321
+    },
+    {
+      "config_ids": [
+        50
+      ],
+      "costs": [
+        -0.06799433890124892
+      ],
+      "trial": 60,
+      "walltime": 199.50275135040283
+    }
+  ],
+  "state": {
+    "tracker": {
+      "1,0": [
+        [
+          0,
+          [
+            {
+              "learning_rate": 0.0151882845156,
+              "max_depth": 11,
+              "min_child_samples": 78,
+              "num_leaves": 23
+            },
+            {
+              "learning_rate": 0.0150731497044,
+              "max_depth": 10,
+              "min_child_samples": 79,
+              "num_leaves": 23
+            }
+          ]
+        ]
+      ]
+    },
+    "next_bracket": 0
+  }
+}

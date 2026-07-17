@@ -8,15 +8,15 @@
     "cputime_limit": Infinity,
     "trial_walltime_limit": null,
     "trial_memory_limit": null,
-    "n_trials": 8,
+    "n_trials": 60,
     "use_default_config": false,
     "instances": null,
     "instance_features": null,
     "adaptive_capping": false,
     "adaptive_capping_slackfactor": null,
     "runtime_cutoff": null,
-    "min_budget": 20,
-    "max_budget": 60,
+    "min_budget": 60,
+    "max_budget": 300,
     "seed": 42,
     "n_workers": 1,
     "_meta": {
@@ -132,7 +132,7 @@
         },
         "initial_design": {
             "name": "RandomInitialDesign",
-            "n_configs": 2,
+            "n_configs": 10,
             "n_configs_per_hyperparameter": 10,
             "additional_configs": [],
             "seed": 42

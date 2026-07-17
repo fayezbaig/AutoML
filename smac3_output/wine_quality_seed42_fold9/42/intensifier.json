@@ -1,0 +1,143 @@
+{
+  "incumbent_ids": [
+    41
+  ],
+  "rejected_config_ids": [
+    4,
+    2,
+    8,
+    9,
+    10,
+    5,
+    12,
+    15,
+    18,
+    19,
+    14,
+    20,
+    24,
+    25,
+    28,
+    29,
+    30,
+    33,
+    34,
+    35,
+    23,
+    39,
+    40,
+    36,
+    44,
+    45,
+    46,
+    49,
+    50
+  ],
+  "incumbents_changed": 8,
+  "trajectory": [
+    {
+      "config_ids": [
+        2
+      ],
+      "costs": [
+        -0.4161617056932765
+      ],
+      "trial": 4,
+      "walltime": 3.053839683532715
+    },
+    {
+      "config_ids": [
+        5
+      ],
+      "costs": [
+        -0.4440671475523731
+      ],
+      "trial": 6,
+      "walltime": 6.724619388580322
+    },
+    {
+      "config_ids": [
+        12
+      ],
+      "costs": [
+        -0.44573360351040214
+      ],
+      "trial": 16,
+      "walltime": 36.202739000320435
+    },
+    {
+      "config_ids": [
+        14
+      ],
+      "costs": [
+        -0.44749573774507106
+      ],
+      "trial": 17,
+      "walltime": 38.679436922073364
+    },
+    {
+      "config_ids": [
+        20
+      ],
+      "costs": [
+        -0.4477246055149336
+      ],
+      "trial": 24,
+      "walltime": 70.30127286911011
+    },
+    {
+      "config_ids": [
+        23
+      ],
+      "costs": [
+        -0.4485832999128747
+      ],
+      "trial": 28,
+      "walltime": 76.03918170928955
+    },
+    {
+      "config_ids": [
+        36
+      ],
+      "costs": [
+        -0.44897819959935237
+      ],
+      "trial": 46,
+      "walltime": 148.9688835144043
+    },
+    {
+      "config_ids": [
+        41
+      ],
+      "costs": [
+        -0.450967162648943
+      ],
+      "trial": 52,
+      "walltime": 169.55541801452637
+    }
+  ],
+  "state": {
+    "tracker": {
+      "1,0": [
+        [
+          0,
+          [
+            {
+              "learning_rate": 0.0264171039573,
+              "max_depth": 13,
+              "min_child_samples": 10,
+              "num_leaves": 83
+            },
+            {
+              "learning_rate": 0.0264966614376,
+              "max_depth": 13,
+              "min_child_samples": 10,
+              "num_leaves": 83
+            }
+          ]
+        ]
+      ]
+    },
+    "next_bracket": 0
+  }
+}

@@ -68,10 +68,10 @@ def main(
 
     automl = AutoML(
         seed=seed,
-        n_trials=8,        # was 200 -- how many configs SMAC evaluates
-        n_init=4,           # was 10 -- initial random design size
-        min_budget=20,       # was 50  -- cheapest n_estimators fidelity
-        max_budget=60,       # was 1000 -- most expensive n_estimators fidelity
+        n_trials=60,        # was 200 -- how many configs SMAC evaluates
+        n_init=10,           # was 10 -- initial random design size
+        min_budget=50,       # was 50  -- cheapest n_estimators fidelity
+        max_budget=300,       # was 1000 -- most expensive n_estimators fidelity
         # Isolates this run's SMAC output directory (smac3_output/<run_id>/<seed>)
         # from every other task/fold/seed combination -- see optimizer.py.
         run_id=f"{task}_fold{fold}_seed{seed}",
@@ -124,10 +124,10 @@ def evaluate_across_folds(
     scores, params_list, models = AutoML.run_per_fold(
         folds,
         seed=seed,
-        n_trials=8,
-        n_init=4,
-        min_budget=20,
-        max_budget=60,
+        n_trials=60,
+        n_init=10,
+        min_budget=60,
+        max_budget=300,
         n_splits=5,
         run_id_prefix=f"{task}_seed{seed}",
     )

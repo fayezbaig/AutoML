@@ -1,0 +1,133 @@
+{
+  "incumbent_ids": [
+    45
+  ],
+  "rejected_config_ids": [
+    2,
+    4,
+    8,
+    9,
+    10,
+    5,
+    14,
+    15,
+    16,
+    19,
+    20,
+    21,
+    24,
+    25,
+    12,
+    29,
+    30,
+    31,
+    34,
+    35,
+    37,
+    39,
+    40,
+    43,
+    27,
+    44,
+    47,
+    49,
+    50
+  ],
+  "incumbents_changed": 7,
+  "trajectory": [
+    {
+      "config_ids": [
+        2
+      ],
+      "costs": [
+        -0.9299498269027439
+      ],
+      "trial": 4,
+      "walltime": 1.8860533237457275
+    },
+    {
+      "config_ids": [
+        4
+      ],
+      "costs": [
+        -0.9303805904534522
+      ],
+      "trial": 5,
+      "walltime": 3.1083366870880127
+    },
+    {
+      "config_ids": [
+        5
+      ],
+      "costs": [
+        -0.933284224869561
+      ],
+      "trial": 6,
+      "walltime": 4.5987255573272705
+    },
+    {
+      "config_ids": [
+        12
+      ],
+      "costs": [
+        -0.9337027497372054
+      ],
+      "trial": 16,
+      "walltime": 19.370320081710815
+    },
+    {
+      "config_ids": [
+        27
+      ],
+      "costs": [
+        -0.9345677218326778
+      ],
+      "trial": 34,
+      "walltime": 46.758692502975464
+    },
+    {
+      "config_ids": [
+        44
+      ],
+      "costs": [
+        -0.9346736002606981
+      ],
+      "trial": 53,
+      "walltime": 81.30377745628357
+    },
+    {
+      "config_ids": [
+        45
+      ],
+      "costs": [
+        -0.9347374077694888
+      ],
+      "trial": 54,
+      "walltime": 82.76074504852295
+    }
+  ],
+  "state": {
+    "tracker": {
+      "1,0": [
+        [
+          0,
+          [
+            {
+              "learning_rate": 0.1825390388123,
+              "max_depth": 12,
+              "min_child_samples": 10,
+              "num_leaves": 69
+            },
+            {
+              "learning_rate": 0.1716535097194,
+              "max_depth": 12,
+              "min_child_samples": 10,
+              "num_leaves": 66
+            }
+          ]
+        ]
+      ]
+    },
+    "next_bracket": 0
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "incumbent_ids": [
+    45
+  ],
+  "rejected_config_ids": [
+    2,
+    5,
+    8,
+    4,
+    10,
+    9,
+    14,
+    15,
+    16,
+    19,
+    20,
+    21,
+    24,
+    25,
+    27,
+    29,
+    30,
+    31,
+    34,
+    35,
+    38,
+    39,
+    40,
+    41,
+    44,
+    11,
+    47,
+    49,
+    50
+  ],
+  "incumbents_changed": 5,
+  "trajectory": [
+    {
+      "config_ids": [
+        2
+      ],
+      "costs": [
+        -0.8959394346170428
+      ],
+      "trial": 4,
+      "walltime": 8.057094097137451
+    },
+    {
+      "config_ids": [
+        4
+      ],
+      "costs": [
+        -0.9022904287496889
+      ],
+      "trial": 5,
+      "walltime": 11.995471715927124
+    },
+    {
+      "config_ids": [
+        9
+      ],
+      "costs": [
+        -0.9033896968616997
+      ],
+      "trial": 11,
+      "walltime": 32.49127459526062
+    },
+    {
+      "config_ids": [
+        11
+      ],
+      "costs": [
+        -0.9035594146072302
+      ],
+      "trial": 16,
+      "walltime": 50.268935680389404
+    },
+    {
+      "config_ids": [
+        45
+      ],
+      "costs": [
+        -0.9037098430928341
+      ],
+      "trial": 54,
+      "walltime": 181.64223623275757
+    }
+  ],
+  "state": {
+    "tracker": {
+      "1,0": [
+        [
+          0,
+          [
+            {
+              "learning_rate": 0.0819794649408,
+              "max_depth": 14,
+              "min_child_samples": 40,
+              "num_leaves": 36
+            },
+            {
+              "learning_rate": 0.0869891232997,
+              "max_depth": 14,
+              "min_child_samples": 40,
+              "num_leaves": 36
+            }
+          ]
+        ]
+      ]
+    },
+    "next_bracket": 0
+  }
+}

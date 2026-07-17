@@ -1,0 +1,133 @@
+{
+  "incumbent_ids": [
+    23
+  ],
+  "rejected_config_ids": [
+    2,
+    4,
+    8,
+    9,
+    10,
+    12,
+    14,
+    15,
+    5,
+    16,
+    19,
+    20,
+    24,
+    25,
+    28,
+    29,
+    30,
+    33,
+    34,
+    35,
+    38,
+    39,
+    40,
+    41,
+    44,
+    45,
+    47,
+    49,
+    50
+  ],
+  "incumbents_changed": 7,
+  "trajectory": [
+    {
+      "config_ids": [
+        2
+      ],
+      "costs": [
+        -0.8964734160227366
+      ],
+      "trial": 4,
+      "walltime": 14.652392148971558
+    },
+    {
+      "config_ids": [
+        4
+      ],
+      "costs": [
+        -0.900072149950508
+      ],
+      "trial": 5,
+      "walltime": 21.713099241256714
+    },
+    {
+      "config_ids": [
+        5
+      ],
+      "costs": [
+        -0.900153189118327
+      ],
+      "trial": 6,
+      "walltime": 32.782525062561035
+    },
+    {
+      "config_ids": [
+        16
+      ],
+      "costs": [
+        -0.9001611310761437
+      ],
+      "trial": 22,
+      "walltime": 135.07431197166443
+    },
+    {
+      "config_ids": [
+        19
+      ],
+      "costs": [
+        -0.9007740660976851
+      ],
+      "trial": 23,
+      "walltime": 159.1920440196991
+    },
+    {
+      "config_ids": [
+        20
+      ],
+      "costs": [
+        -0.9010173817639027
+      ],
+      "trial": 24,
+      "walltime": 164.2735047340393
+    },
+    {
+      "config_ids": [
+        23
+      ],
+      "costs": [
+        -0.9014380560586076
+      ],
+      "trial": 28,
+      "walltime": 174.5399079322815
+    }
+  ],
+  "state": {
+    "tracker": {
+      "1,0": [
+        [
+          0,
+          [
+            {
+              "learning_rate": 0.1365038917052,
+              "max_depth": 3,
+              "min_child_samples": 49,
+              "num_leaves": 32
+            },
+            {
+              "learning_rate": 0.1365314377536,
+              "max_depth": 4,
+              "min_child_samples": 49,
+              "num_leaves": 32
+            }
+          ]
+        ]
+      ]
+    },
+    "next_bracket": 0
+  }
+}

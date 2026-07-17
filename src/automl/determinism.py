@@ -95,3 +95,4 @@ def seed_everything(seed: int) -> None:
     import numpy as np  # local import: numpy must not be imported before
                         # pin_thread_env() has had a chance to run
     np.random.seed(seed)
+

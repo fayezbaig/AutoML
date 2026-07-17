@@ -26,6 +26,7 @@ def get_configspace(seed: int = 42) -> ConfigurationSpace:
             Integer("num_leaves", (20, 100), default=31),
             Integer("max_depth", (3, 15), default=8),
             Integer("min_child_samples", (10, 100), default=20),
+            
         ]
     )
     return cs
