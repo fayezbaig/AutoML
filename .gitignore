@@ -20,6 +20,14 @@ data/**
 !data/exam_dataset/test_out/*.json
 !data/exam_dataset/*.npy
 
+# HPO search results, run-history bookkeeping, and CatBoost's own
+# per-run scratch directory -- not source code, regenerable by rerunning
+results/
+catboost_info/
+*.lock
+*.pkl
+*.csv_lock
+
 # Logs and test artifacts
 *.log
 .coverage
@@ -41,3 +49,6 @@ dist/
 *.egg-info/
 .eggs/
 MANIFEST
+
+# Personal TabPFN API token -- NEVER commit this
+.tabpfn_token

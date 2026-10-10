@@ -3,7 +3,12 @@ name = "automl"
 license = { file = "LICENSE" }
 # Feel free to change from here
 version = "0.1.0"
-dependencies = ["scikit-learn", "openml", "pandas", "numpy<2.0", "IPython"]
+dependencies = [
+    "xgboost",
+    "catboost",
+    "tabpfn",
+    "torch",
+    "optuna","scikit-learn", "openml", "pandas", "numpy<2.0", "IPython", "smac", "neural-pipeline-search==0.13.0"]
 requires-python = ">=3.10"
 authors = [{ name = "user", email = "user@user.com" }]
 readme = "README.md"
@@ -20,3 +25,6 @@ classifiers = [
   'Operating System :: MacOS',
   'Programming Language :: Python :: 3',
 ]
+
+[project.optional-dependencies]
+dev = ["pycodestyle"]

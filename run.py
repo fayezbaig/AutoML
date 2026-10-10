@@ -5,17 +5,33 @@ For the practice datasets you are given access to y_test; however,
 for the exam dataset, you will not have access to these labels.
 You will need to output your predictions for X_test to a file,
 which we will grade using GitHub Classroom.
+
+Two usage modes:
+
+1) Single fold (original behaviour) -- writes predictions straight
+   to --output-path:
+
+    python run.py --task wine_quality --fold 3 --seed 42 --output-path demo_wine_quality.npy
+
+2) All folds (new) -- runs every fold from 1..--n-folds, writes one
+   predictions file per fold (suffixed with the fold number), and
+   reports the mean +/- std R^2 across folds:
+
+    python run.py --task wine_quality --n-folds 10 --seed 42 --output-path demo_wine_quality.npy
 """
 from __future__ import annotations
+import sys
+sys.path.insert(0, "src")
+from automl.determinism import reexec_with_fixed_hash_seed, pin_thread_env
+reexec_with_fixed_hash_seed()
+pin_thread_env()
 
 from pathlib import Path
 from sklearn.metrics import r2_score
 import numpy as np
 from automl.data import Dataset
-from automl.automl import AutoML
+from automl.core import AutoML
 import argparse
-
-
 
 import logging
 
@@ -25,23 +41,29 @@ FILE = Path(__file__).absolute().resolve()
 DATADIR = FILE.parent / "data"
 
 
-def main(
+def _fold_output_path(output_path: Path, fold: int) -> Path:
+    """Insert '_fold{N}' before the file extension, e.g.
+    'demo_wine_quality.npy' -> 'demo_wine_quality_fold3.npy'."""
+    return output_path.with_name(f"{output_path.stem}_fold{fold}{output_path.suffix}")
+
+
+def run_single_fold(
     task: str,
     fold: int,
     output_path: Path,
     seed: int,
     datadir: Path,
-):
-    """
-    Single-fold path. This is the ONE that matches the exam dataset:
-    only ever one (X_train, y_train, X_test) is available, so HPO here
-    uses internal-CV (Tier 1, automl.fit) -- it never assumes outer
-    folds exist.
-    """
+) -> tuple[np.ndarray, float | None]:
+    """Fits AutoML on one fold, writes predictions to output_path, and
+    returns (test_preds, r2_test_or_None)."""
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
-    logger.info("Fitting AutoML (Tier 1: internal-CV HPO)")
+    logger.info(f"Fitting AutoML [task={task}, fold={fold}]")
 
+    # You do not need to follow this setup or API it's merely here to provide
+    # an example of how your automl system could be used.
+    # As a general rule of thumb, you should **never** pass in any
+    # test data to your AutoML solution other than to generate predictions.
     automl = AutoML(seed=seed)
     automl.fit(dataset.X_train, dataset.y_train)
     test_preds: np.ndarray = automl.predict(dataset.X_test)
@@ -49,79 +71,80 @@ def main(
     # Write the predictions of X_test to disk
     # This will be used by github classrooms to get a performance
     # on the test set.
-    logger.info("Writing predictions to disk")
+    logger.info(f"Writing predictions to disk: {output_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as f:
         np.save(f, test_preds)
 
+    r2_test = None
     if dataset.y_test is not None:
         r2_test = r2_score(dataset.y_test, test_preds)
-        logger.info(f"R^2 on test set: {r2_test}")
+        logger.info(f"[fold {fold}] R^2 on test set: {r2_test:.4f}")
     else:
         # This is the setting for the exam dataset, you will not have access to y_test
-        logger.info(f"No test labels (y_test) for task '{task}'")
+        logger.info(f"[fold {fold}] No test labels (y_test) for task '{task}'")
+
+    return test_preds, r2_test
 
 
-def evaluate_across_folds(
+def main(
     task: str,
-    n_folds: int,
+    fold: int,
+    output_path: Path,
     seed: int,
     datadir: Path,
-    output_path: Path,
+    n_folds: int | None = None,
 ):
-    """
-    Multi-fold path. Only valid for the practice datasets (which give
-    you several outer folds). HPO here uses multi-fold-averaging
-    (Tier 2, automl.fit_multi_fold) to select hyperparameters that hold
-    up across different train/test splits, THEN evaluate_per_fold trains
-    one fresh model per fold with those hyperparameters and reports the
-    honest per-fold test R2 -- this is what validates your pipeline
-    DESIGN, it is not the path used for the exam dataset itself.
-    """
-
-    folds = []
-
-    for fold in range(1, n_folds + 1):
-
-        logger.info(f"Loading fold {fold}")
-
-        dataset = Dataset.load(
-            datadir=datadir,
-            task=task,
-            fold=fold
+    # ------------------------------------------------------------------
+    # Single-fold mode (original behaviour): unchanged, writes straight
+    # to output_path.
+    # ------------------------------------------------------------------
+    if n_folds is None:
+        run_single_fold(
+            task=task, fold=fold, output_path=output_path, seed=seed, datadir=datadir,
         )
+        return
 
-        folds.append(
-            (
-                dataset.X_train,
-                dataset.y_train,
-                dataset.X_test,
-                dataset.y_test
-            )
+    # ------------------------------------------------------------------
+    # All-folds mode: loop folds 1..n_folds, one predictions file per
+    # fold, then report mean +/- std R^2 across folds.
+    # ------------------------------------------------------------------
+    if task == "exam_dataset" and n_folds > 1:
+        logger.warning(
+            "'exam_dataset' only has a single fold (fold 1); "
+            "ignoring --n-folds and running fold 1 only."
         )
+        n_folds = 1
 
-    logger.info("Running multi-fold-averaging HPO across all outer folds")
+    r2_scores = []
+    for fold_i in range(1, n_folds + 1):
+        fold_output_path = _fold_output_path(output_path, fold_i)
+        _, r2_test = run_single_fold(
+            task=task, fold=fold_i, output_path=fold_output_path, seed=seed, datadir=datadir,
+        )
+        if r2_test is not None:
+            r2_scores.append(r2_test)
 
-    automl = AutoML(seed=seed)
-    automl.fit_multi_fold(folds)
-
-    scores = automl.evaluate_per_fold(folds)
-
-    # Save the last fold's predictions as a sanity-check artifact
-    # (evaluate_per_fold already stores one model per fold in
-    # automl.models, in the same order as `folds`).
-    if output_path is not None:
-        last_preds = automl.models[-1].predict(folds[-1][2])
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with output_path.open("wb") as f:
-            np.save(f, last_preds)
-
-    logger.info(
-        f"\n{task}: mean R\u00b2 = {scores.mean():.4f} "
-        f"+/- {scores.std():.4f} over {n_folds} folds"
-    )
-
-    return scores
+    if r2_scores:
+        r2_scores = np.array(r2_scores)
+        mean_r2 = r2_scores.mean()
+        std_r2 = r2_scores.std()
+        logger.info(
+            f"[{task}] R^2 across {len(r2_scores)}/{n_folds} folds: "
+            f"{mean_r2:.4f} \u00b1 {std_r2:.4f}"
+        )
+        print(
+            f"[{task}] Average TEST R2 across {len(r2_scores)} folds "
+            f"(seed={seed}): {mean_r2:.4f} \u00b1 {std_r2:.4f}"
+        )
+        summary_path = output_path.with_name(f"{output_path.stem}_r2_summary.npy")
+        np.save(summary_path, r2_scores)
+        logger.info(f"Saved per-fold R^2 scores to {summary_path}")
+    else:
+        logger.info(
+            f"[{task}] No y_test available for any fold -- nothing to average "
+            f"(expected for 'exam_dataset')."
+        )
 
 
 if __name__ == "__main__":
@@ -141,6 +164,9 @@ if __name__ == "__main__":
         help=(
             "The path to save the predictions to."
             " By default this will just save to './predictions.npy'."
+            " In --n-folds mode, this is used as a base name: each fold's"
+            " predictions are saved as '<stem>_fold<N><suffix>', and the"
+            " per-fold R^2 scores are saved as '<stem>_r2_summary.npy'."
         )
     )
     parser.add_argument(
@@ -148,22 +174,22 @@ if __name__ == "__main__":
         type=int,
         default=1,
         help=(
-            "The fold to run on."
+            "The fold to run on (single-fold mode, ignored if --n-folds is set)."
             " You are free to also evaluate on other folds for your own analysis."
             " For the exam dataset, there exists only a single fold, fold 1."
         ),
     )
-
     parser.add_argument(
         "--n-folds",
         type=int,
         default=None,
         help=(
-            "If set, runs evaluate_across_folds instead of main -- loops folds 1..n_folds"
-            " and reports mean/std R^2. Only valid for practice datasets"
+            "If set, run on folds 1..N instead of a single fold, and report"
+            " the mean +/- std R^2 across all folds that have test labels."
+            " Practice datasets have 10 folds available; 'exam_dataset' has"
+            " only 1 fold regardless of this argument."
         ),
     )
-
     parser.add_argument(
         "--seed",
         type=int,
@@ -201,20 +227,11 @@ if __name__ == "__main__":
         f"\n{args}"
     )
 
-    if args.n_folds is not None:
-
-        evaluate_across_folds(
-            task=args.task,
-            n_folds=args.n_folds,
-            seed=args.seed,
-            datadir=args.datadir,
-            output_path=args.output_path,
-        )
-    else:
-        main(
-            task=args.task,
-            fold=args.fold,
-            output_path=args.output_path,
-            datadir=args.datadir,
-            seed=args.seed,
-        )
+    main(
+        task=args.task,
+        fold=args.fold,
+        output_path=args.output_path,
+        datadir=args.datadir,
+        seed=args.seed,
+        n_folds=args.n_folds,
+    )

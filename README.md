@@ -28,6 +28,15 @@ conda activate automl-tabular-env
 
 Then install the repository by running the following command:
 
+## Setup
+
+### macOS only
+LightGBM requires Apple's OpenMP runtime, which isn't bundled with the pip package:
+```bash
+brew install libomp
+```
+
+### Then, all platforms:
 ```bash
 pip install -e .
 ```

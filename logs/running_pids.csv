@@ -1,0 +1,6 @@
+"Task","PID","LogOut","LogErr"
+"bike_sharing_demand","13836","logs\bike_sharing_demand.out.log","logs\bike_sharing_demand.err.log"
+"brazilian_houses","6276","logs\brazilian_houses.out.log","logs\brazilian_houses.err.log"
+"superconductivity","7176","logs\superconductivity.out.log","logs\superconductivity.err.log"
+"wine_quality","13508","logs\wine_quality.out.log","logs\wine_quality.err.log"
+"yprop_4_1","25212","logs\yprop_4_1.out.log","logs\yprop_4_1.err.log"
